@@ -10,12 +10,16 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 import os
+import time
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import extra_streamlit_components as stx
 
 from ai_model import food_detect
 from api_info import *
+
+
+
 
 #  page configuration
 st.set_page_config(
@@ -254,7 +258,10 @@ def create_metric_card(title, value, prefix="", suffix=""):
     """, unsafe_allow_html=True)
 
 
+
+
 def home_page():
+
     # Sidebar for settings
     st.sidebar.title(f"Welcome, {st.session_state['user_email'].split('@')[0]}!")
     with st.sidebar:
@@ -283,6 +290,8 @@ def home_page():
 
     # Main content
     col1, col2 = st.columns([1, 1])
+    
+
 
     with col1:
         # st.markdown("<div class='result-box'>", unsafe_allow_html=True)
@@ -324,7 +333,7 @@ def home_page():
                                 result.append({
                                     "food": food_name,
                                     "calories": calories,  
-                                    "portion": "1 serving",  # Dummy portion value for now
+                                    "portion": "1 serving",  # TODO:Dummy portion value for now
                                     "confidence": confidence  # Confidence percentage
                                 })
 
@@ -341,6 +350,7 @@ def home_page():
                         st.success("✨ Analysis Complete!")
                         # st.image(output_image, caption="Output Image", use_container_width=True)
                         os.remove(temp_image_path)
+                        
                     except Exception as e:
                         st.error(f"❌ Error: {str(e)}")
         st.markdown("</div>", unsafe_allow_html=True)
@@ -365,76 +375,82 @@ def home_page():
             else:
                 create_metric_card("Remaining Today", remaining, suffix=" kcal")
             
-            create_metric_card("Steps Today", latest["steps"])
+            # create_metric_card("Steps Today", latest["steps"])
 
-        # Detected foods with confidence
-        st.markdown("### 🍽️ Detected Items")
 
-        latest = st.session_state.history[-1]
-        
-        for food in latest['foods']:
-            confidence_color = f"rgb({int(255*(1-food['confidence']))}, {int(255*food['confidence'])}, 0)"
-            st.markdown(f"""
-                <div style="padding: 10px; margin: 5px 0; background: rgba(0,255,136,0.1); border-radius: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #00ff88;">{food['food']}</span>
-                        <select id="{food['food']}_unit" style="padding: 5px; border-radius: 5px; border: 1px solid #ccc;">
-                            <option value="servings">Servings</option>
-                            <option value="grams">Grams</option>
-                            <option value="pieces">Pieces</option>
-                        </select>
-                        <input type="number" id="{food['food']}_quantity" style="margin-left: 10px;" />
-                        <input type="checkbox" id="{food['food']}_checkbox" style="margin-left: 10px;" />
-                </div>
-                    <div style="color: #00ccff; font-size: 0.9em;">
-                        {food['calories']} kcal per {food['portion']}
-                    </div>
-                        <div style="color: {confidence_color};">{int(food['confidence']*100)}% confident</div>
-                </div>
-        """, unsafe_allow_html=True)
-        if st.button("📥 Save Meal", key="save_meal"):
-            try:
-                # Ensure the user is logged in and has a valid user_id
-                user_id = st.session_state.get('user_id')
-                if not user_id:
-                    st.error("You must be logged in to save meals.")
-                    st.stop()
+        if 1:
 
-                # Ensure there is a latest analysis to save
-                if not st.session_state.history:
-                    st.error("No meal detected to save.")
-                    st.stop()
+            # Detected foods with confidence
+            st.markdown("### 🍽️ Detected Items")
 
-                latest = st.session_state.history[-1]
-                today_date = todays_date()
-
-                foods_detect=st.session_state.history[-1]["foods"]
-                foods_detected = [f"{item['food']}:{item['calories']}kcal" for item in foods_detect]
-
-                # Insert the meal into the database
-                new_meal_insert(
-                    supabase=supabase,
-                    user_id=user_id,
-                    today_date=today_date,
-                    meal_cal=latest['meal_calories'],
-                    foods_detected=foods_detected
-                )
-
-                # Fetch the updated total calories for the day
-                updated_calories = get_cal_consumed(supabase,user_id, today_date)
-
-                # Update the Total Calories metric dynamically
-                latest['total_calories'] = updated_calories
-                st.session_state.history[-1] = latest
-                st.success("Meal saved successfully!")
-                st.rerun()  # Refresh the UI to show updated values
-
-            except Exception as e:
-                st.error(f"Error saving meal: {str(e)}")
-
-        else:
+            latest = st.session_state.history[-1]
             
-            st.markdown("</div>", unsafe_allow_html=True)
+            for food in latest['foods']:
+                confidence_color = f"rgb({int(255*(1-food['confidence']))}, {int(255*food['confidence'])}, 0)"
+                st.markdown(f"""
+                    <div style="padding: 10px; margin: 5px 0; background: rgba(0,255,136,0.1); border-radius: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #00ff88;">{food['food']}</span>
+                            <select id="{food['food']}_unit" style="padding: 5px; border-radius: 5px; border: 1px solid #ccc;">
+                                <option value="servings">Servings</option>
+                                <option value="grams">Grams</option>
+                                <option value="pieces">Pieces</option>
+                            </select>
+                            <input type="number" id="{food['food']}_quantity" style="margin-left: 10px;" />
+                            <input type="checkbox" id="{food['food']}_checkbox" style="margin-left: 10px;" />
+                    </div>
+                        <div style="color: #00ccff; font-size: 0.9em;">
+                            {food['calories']} kcal per {food['portion']}
+                        </div>
+                            <div style="color: {confidence_color};">{int(food['confidence']*100)}% confident</div>
+                    </div>
+            """, unsafe_allow_html=True)
+            if st.button("📥 Save Meal", key="save_meal"):
+                try:
+                    # Ensure the user is logged in and has a valid user_id
+                    user_id = st.session_state.get('user_id')
+                    if not user_id:
+                        st.error("You must be logged in to save meals.")
+                        st.stop()
+
+                    # Ensure there is a latest analysis to save
+                    if not st.session_state.history:
+                        st.error("No meal detected to save.")
+                        st.stop()
+
+                    latest = st.session_state.history[-1]
+                    today_date = todays_date()
+
+                    foods_detect=st.session_state.history[-1]["foods"]
+                    foods_detected = [f"{item['food']}:{item['calories']}kcal" for item in foods_detect]
+
+                    # Insert the meal into the database
+                    new_meal_insert(
+                        supabase=supabase,
+                        user_id=user_id,
+                        today_date=today_date,
+                        meal_cal=latest['meal_calories'],
+                        foods_detected=foods_detected
+                    )
+
+                    # Fetch the updated total calories for the day
+                    updated_calories = get_cal_consumed(supabase,user_id, today_date)
+
+                    # Update the Total Calories metric dynamically
+                    latest['total_calories'] = updated_calories
+                    st.session_state.history[-1] = latest
+                    meal_saved=st.success("Meal saved successfully!")
+                    time.sleep(2)
+                    meal_saved.empty()
+                    
+                    st.rerun()  # Refresh the UI to show updated values
+
+                except Exception as e:
+                    st.error(f"Error saving meal: {str(e)}")
+
+            else:
+                
+                st.markdown("</div>", unsafe_allow_html=True)
 
     # Visualizations
     st.markdown("---")
@@ -625,6 +641,8 @@ def home_page():
 
 
 def main():
+
+    
     load_dotenv()
     supabase: Client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 

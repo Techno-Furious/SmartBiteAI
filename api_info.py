@@ -100,8 +100,9 @@ def get_latest_daily_data(supabase:Client,user_id):
         .execute()
     )
     if result.data:
-        return result.data[0] 
+        return result.data[0]  # Return the first record (there should only be one)
     else:
+        # If no record for today, return default data
         return {
             "cal_consumed": 0,
             "cal_burnt": 0,
