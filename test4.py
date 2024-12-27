@@ -374,7 +374,7 @@ def home_page():
 
         with metrics_cols[1]:
             # Replace daily goal with a predefined constant or a user-specific value
-            daily_goal = 2000
+            daily_goal = st.session_state.daily_goal
             remaining = daily_goal - latest["cal_consumed"]
             if remaining < 0:
                 create_metric_card("Extra Calories Today", abs(remaining), suffix=" kcal")
