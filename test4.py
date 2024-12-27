@@ -277,7 +277,7 @@ def home_page():
         # Add time filter for history
         st.markdown("### 📅 History Filter")
         time_filter = st.selectbox(
-            "Show data for:",
+            "Show data from:",
             ["Last 24 Hours", "Last Week", "Last Month", "All Time"]
         )
     if st.sidebar.button("Logout"):
@@ -290,14 +290,14 @@ def home_page():
 
     # Main content
     col1, col2 = st.columns([1, 1])
-    
 
-
+ 
     with col1:
         # st.markdown("<div class='result-box'>", unsafe_allow_html=True)
         st.markdown("<h2>📸 Image Analysis</h2>", unsafe_allow_html=True)
         uploaded_file = st.file_uploader("Upload food image", type=["jpg", "jpeg", "png","webp"])
         initital=st.info("👆 Upload an image to start analysis")
+     
 
         if uploaded_file is not None:
             initital.empty()
@@ -345,6 +345,8 @@ def home_page():
                             'total_calories': st.session_state.history[-1]['total_calories']+meal_calories if st.session_state.history else meal_calories,
                             'meal_calories': meal_calories
                         })
+
+                        
                         img.empty()
                         img.image(output_image, caption="Output Image", use_container_width=True)
                         st.success("✨ Analysis Complete!")
@@ -354,6 +356,10 @@ def home_page():
                     except Exception as e:
                         st.error(f"❌ Error: {str(e)}")
         st.markdown("</div>", unsafe_allow_html=True)
+
+
+    if 'meal_just_saved' not in st.session_state:
+        st.session_state.meal_just_saved = False
 
     with col2:
         # st.markdown("<div class='result-box'>", unsafe_allow_html=True)
@@ -378,7 +384,7 @@ def home_page():
             # create_metric_card("Steps Today", latest["steps"])
 
 
-        if 1:
+        if (st.session_state.history and len(st.session_state.history[-1]['foods']) > 0 and not st.session_state.meal_just_saved):
 
             # Detected foods with confidence
             st.markdown("### 🍽️ Detected Items")
@@ -405,7 +411,9 @@ def home_page():
                             <div style="color: {confidence_color};">{int(food['confidence']*100)}% confident</div>
                     </div>
             """, unsafe_allow_html=True)
+            print("Meal saved successfully!")
             if st.button("📥 Save Meal", key="save_meal"):
+                
                 try:
                     # Ensure the user is logged in and has a valid user_id
                     user_id = st.session_state.get('user_id')
@@ -439,10 +447,12 @@ def home_page():
                     # Update the Total Calories metric dynamically
                     latest['total_calories'] = updated_calories
                     st.session_state.history[-1] = latest
+
+                    st.session_state.meal_just_saved = True
+
                     meal_saved=st.success("Meal saved successfully!")
                     time.sleep(2)
                     meal_saved.empty()
-                    
                     st.rerun()  # Refresh the UI to show updated values
 
                 except Exception as e:
@@ -451,6 +461,9 @@ def home_page():
             else:
                 
                 st.markdown("</div>", unsafe_allow_html=True)
+
+            if 'analyze' in st.session_state and st.session_state.analyze:
+                st.session_state.meal_just_saved = False
 
     # Visualizations
     st.markdown("---")
@@ -627,6 +640,7 @@ def home_page():
             }
             for entry in filtered_history[::-1]  # Reverse to display most recent first
         ])
+        history_df.index = range(1, len(history_df) + 1)
         st.dataframe(history_df, use_container_width=True)
     else:
         st.info("No analysis history available for the selected filter. Upload an image to get started!")
