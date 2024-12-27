@@ -13,6 +13,7 @@ import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import extra_streamlit_components as stx
+from fitbit import *
 
 from ai_model import food_detect
 from api_info import *
@@ -354,7 +355,11 @@ def home_page():
         metrics_cols = st.columns(2)
         with metrics_cols[0]:
             create_metric_card("Total Calories Consumed", latest["cal_consumed"], suffix=" kcal")
-            create_metric_card("Calories Burnt", latest["cal_burnt"], suffix=" kcal")
+            dist = round(dist_covered(), 4)
+            if dist < 1:
+                create_metric_card("Distance Covered", dist*1000, suffix=" m")
+            else:
+                create_metric_card("Distance Covered", dist, suffix=" km")
 
         with metrics_cols[1]:
             # Replace daily goal with a predefined constant or a user-specific value
@@ -364,8 +369,7 @@ def home_page():
                 create_metric_card("Extra Calories Today", abs(remaining), suffix=" kcal")
             else:
                 create_metric_card("Remaining Today", remaining, suffix=" kcal")
-            
-            create_metric_card("Steps Today", latest["steps"])
+            create_metric_card("Steps Today", steps_covered(), suffix=" steps")  
 
         # Detected foods with confidence
         st.markdown("### 🍽️ Detected Items")

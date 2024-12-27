@@ -4,7 +4,11 @@ import pytz
 import os
 from dotenv import load_dotenv
 from supabase import Client
+from fitbit import steps_covered, dist_covered,cal_burned
 
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY")
+supabase = create_client(supabase_url, supabase_key)
 
 def timestampz():
     ist = pytz.timezone("Asia/Kolkata")
@@ -39,6 +43,55 @@ def get_cal_consumed(supabase:Client,user_id: str, today_date: str) -> int:
     except Exception as e:
         print(f"Error in get_cal_consumed: {str(e)}")
         raise ValueError(f"Error fetching cal_consumed: {str(e)}")
+    
+def update_steps(supabase:Client,user_id: str, today_date: str):
+    try:
+        ensure_daily_entry(supabase,user_id, today_date)
+        steps = steps_covered()
+        response = (
+            supabase.table("Daily")
+            .update({"steps": steps})
+            .eq("user_id", user_id)
+            .eq("date", today_date)
+            .execute()
+        )
+        print(f"Steps successfully updated to {steps}")
+    except Exception as e:
+        print(f"Error in update_steps_distance: {str(e)}")
+        raise ValueError(f"Error updating steps and distance: {str(e)}")
+    
+def update_distance(supabase:Client,user_id: str, today_date: str):
+    try:
+        ensure_daily_entry(supabase,user_id, today_date)
+        distance = dist_covered()
+        response = (
+            supabase.table("Daily")
+            .update({"distance": distance})
+            .eq("user_id", user_id)
+            .eq("date", today_date)
+            .execute()
+        )
+        print(f"Steps successfully updated distance to {distance}")
+    except Exception as e:
+        print(f"Error in update_steps_distance: {str(e)}")
+        raise ValueError(f"Error updating steps and distance: {str(e)}")
+    
+def update_burned(supabase:Client,user_id: str, today_date: str):
+    try:
+        ensure_daily_entry(supabase,user_id, today_date)
+        burned = cal_burned()
+        response = (
+            supabase.table("Daily")
+            .update({"cal_burnt": burned})
+            .eq("user_id", user_id)
+            .eq("date", today_date)
+            .execute()
+        )
+        print(f"Steps successfully updated calories burnt to {burned}")
+    except Exception as e:
+        print(f"Error in update_steps_distance: {str(e)}")
+        raise ValueError(f"Error updating steps and distance: {str(e)}")
+
 
 def ensure_daily_entry(supabase:Client,user_id: str, today_date: str):
     try:
@@ -108,3 +161,5 @@ def get_latest_daily_data(supabase:Client,user_id):
             "steps": 0,
             "distance": 0.0,
         }
+    
+# update_steps_distance(supabase,os.getenv("user_id"), todays_date())

@@ -1,27 +1,44 @@
 import requests
 import dotenv
 import os
+from datetime import datetime
+from api_info import update_steps_distance,ensure_daily_entry
 
 dotenv.load_dotenv()
 
 access_token = os.getenv('access_token')
 header = {'Authorization': f'Bearer {access_token}'}
 
-response = requests.get('https://api.fitbit.com/1/user/-/activities.json', headers=header).json()
+def todays_date():
+    return datetime.today().strftime("%Y-%m-%d")
 
-def cal_burned(response):
-    date,val =  response['best']['total']['steps'].values()
-    return date,val
+# response = requests.get(f'https://api.fitbit.com/1/user/-/activities/date/{todays_date()}.json', headers=header).json()
+# print(response)
+# total_distance = response['summary']['distances'][0]['distance']
+# print(total_distance)
 
-def dist_covered(response):
-    date,val =  response['best']['total']['distance'].values()
-    return date,val
+def steps_covered():
+    response = requests.get(f'https://api.fitbit.com/1/user/-/activities/date/{todays_date()}.json', headers=header).json()
+    return response['summary']['steps']
 
-date,val = cal_burned(response)
-print(f"Date: {date} \nCalories Burned: {val} steps")
+def dist_covered():
+    response = requests.get(f'https://api.fitbit.com/1/user/-/activities/date/{todays_date()}.json', headers=header).json()
+    return response['summary']['distances'][0]['distance']
 
-date,val = dist_covered(response)
-print(f"Date: {date} \nDistance Covered: {val} kms")
+def cal_burned():
+    response = requests.get(f'https://api.fitbit.com/1/user/-/activities/date/{todays_date()}.json', headers=header).json()
+    return response['summary']['caloriesOut']
+
+if __name__ == '__main__':
+    print(f"Steps Covered: {steps_covered()}")
+    print(f"Distance Covered: {dist_covered()}")
+    print(f"Calories Burned: {cal_burned()}")
+
+# date,val = steps_burned(response)
+# print(f"Calories Burned: {val} steps")
+
+# date,val = dist_covered(response)
+# print(f"Distance Covered: {val} kms")
 # {'best': {'total': {'distance': {'date': '2024-12-27',
 #                                   'value': 0.30739},
 #                      'steps': {'date': '2024-12-27', 'value': 405}
@@ -32,3 +49,10 @@ print(f"Date: {date} \nDistance Covered: {val} kms")
 # 'tracker': {'activeScore': -1, 'caloriesOut': -1, 'distance': 0.31, 'floors': 0, 'steps': 405}}
  
 #  }
+
+{   'activities': [], 
+    'summary': {'caloriesOut': 9, 'activityCalories': 0, 'caloriesBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentaryMinutes': 6, 'lightlyActiveMinutes': 0, 'fairlyActiveMinutes': 0, 'veryActiveMsBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentasBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentasBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentasBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentaryMinutes': 6, 'lightlyActiveMinutes': 0, 'fairlyActiveMinutes': 0, 'veryActiveMinutes': 0, 'distances': [{'activity': 'total', 'distance': 0.0}, {'activity': 'tracker', 'distance': 0.0}, {'activity': 'sedentaryActive', 'distance': 0.0}, {'activity': 'lightlyActive', 'distance': 0.0}, {'activity': 'moderatelyActive', 'distance': 0.0}, {'activity': 'veryActive', 'distance': 0.0}, 
+    {'activity': 'loggedActivities', 'distance': 0.0}],
+     'marginalCalories': 0, 'heartRateZones': []},
+     'goals': {'caloriesOut': 2624, 'steps': 10000, 'distance': 8.05, 'floors': 10, 'activeMinutes': 30}
+ }
