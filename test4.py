@@ -10,16 +10,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 import os
-import time
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import extra_streamlit_components as stx
-
+from fitbit import *
 from ai_model import food_detect
 from api_info import *
-
-
-
 
 #  page configuration
 st.set_page_config(
@@ -66,6 +62,18 @@ st.markdown("""
         background: rgba(0,255,136,0.05);
     }
     
+    .stButton back {     
+        background: linear-gradient(45deg, #00ff88, #00ccff) !important;
+        color: #FFF !important;
+        font-family: 'Orbitron', sans-serif !important;
+        font-weight: bold !important;
+        border: none !important;
+        border-radius: 25px !important;
+        padding: 15px 30px !important;
+        transition: all 0.3s ease !important;  
+    }     
+
+
     .stButton button {
         background: linear-gradient(45deg, #00ff88, #00ccff) !important;
         color: #1a1a2e !important;
@@ -182,6 +190,7 @@ def login_page(supabase: Client):
                     st.session_state['user_id'] = response.user.id
                     st.session_state['user_email'] = response.user.email
                     st.session_state['logged_in'] = True
+                    st.session_state['page'] = 'home'
                     st.rerun()
                 else:
                     st.error("Login failed. Please check your credentials.")
@@ -258,10 +267,72 @@ def create_metric_card(title, value, prefix="", suffix=""):
     """, unsafe_allow_html=True)
 
 
+def fitbit_page():
+    # Header and description
+    st.markdown(
+        """
+        <div >
+            <h3>🏃‍♂️ Fitbit Integration</h3>
+            <p style="font-size:16px; color:#FFF;">Connect your Fitbit account to track your calories burnt, daily steps and distance covered.</p>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
+
+    # Input for access token
+    st.markdown("<h4>Enter Your Fitbit Access Token</h4>", unsafe_allow_html=True)
+    access_token = st.text_input("Access Token", placeholder="Paste your Fitbit access token here")
+
+    
+    # Save button
+    if st.button("Save Access Token"):
+        if access_token.strip():
+            response = supabase.table("Fitbit_Token").select("*").eq("user_id", user_id).execute()
+
+            if response.data:
+                # User has a token, update it
+                update_response = supabase.table("Fitbit_Token").update({
+                    "access_token": access_token,
+                    "updated_at": "now()"
+                }).eq("user_id", user_id).execute()
+                
+                if not update_response:
+                    print(f"Error updating token: {update_response.error}")
+                else:
+                    print("Access token updated successfully.")
+            else:
+                # User does not have a token, insert new record
+                insert_response = supabase.table("Fitbit_Token").insert({
+                    "user_id": user_id,
+                    "access_token": access_token
+                }).execute()
+                
+                if not insert_response:
+                    print(f"Error inserting token: {insert_response.error}")
+                else:
+                    print("Access token inserted successfully.")
+            st.success("Your Fitbit access token has been saved!")
+            st.session_state.page = 'home' 
+            st.rerun()
+        else:
+            st.error("Please enter a valid access token.")
+
+
+
+    if st.button("Back to Home"):
+        st.session_state.page = 'home'
+        st.rerun()
+    
+    # Footer
+    st.markdown("---")
+    st.markdown(
+        "<p style='text-align: center; color: #00ccff; font-family: Orbitron;'>SmartBite AI © 2024</p>",
+        unsafe_allow_html=True)
+
+
 
 
 def home_page():
-
     # Sidebar for settings
     st.sidebar.title(f"Welcome, {st.session_state['user_email'].split('@')[0]}!")
     with st.sidebar:
@@ -280,6 +351,11 @@ def home_page():
             "Show data from:",
             ["Last 24 Hours", "Last Week", "Last Month", "All Time"]
         )
+
+        if st.button("Connect Fitbit"):
+            st.session_state['page'] = 'fitbit'
+            st.rerun()
+
     if st.sidebar.button("Logout"):
             # st.session_state['logged_in'] = False
             # st.session_state['page'] = 'login'
@@ -291,13 +367,11 @@ def home_page():
     # Main content
     col1, col2 = st.columns([1, 1])
 
- 
     with col1:
         # st.markdown("<div class='result-box'>", unsafe_allow_html=True)
         st.markdown("<h2>📸 Image Analysis</h2>", unsafe_allow_html=True)
         uploaded_file = st.file_uploader("Upload food image", type=["jpg", "jpeg", "png","webp"])
         initital=st.info("👆 Upload an image to start analysis")
-     
 
         if uploaded_file is not None:
             initital.empty()
@@ -345,32 +419,35 @@ def home_page():
                             'total_calories': st.session_state.history[-1]['total_calories']+meal_calories if st.session_state.history else meal_calories,
                             'meal_calories': meal_calories
                         })
-
-                        
                         img.empty()
                         img.image(output_image, caption="Output Image", use_container_width=True)
                         st.success("✨ Analysis Complete!")
                         # st.image(output_image, caption="Output Image", use_container_width=True)
                         os.remove(temp_image_path)
-                        
                     except Exception as e:
                         st.error(f"❌ Error: {str(e)}")
         st.markdown("</div>", unsafe_allow_html=True)
-
-
-    if 'meal_just_saved' not in st.session_state:
-        st.session_state.meal_just_saved = False
 
     with col2:
         # st.markdown("<div class='result-box'>", unsafe_allow_html=True)
         st.markdown("<h2>📊 Latest Analytics</h2>", unsafe_allow_html=True)
 
         latest = get_latest_daily_data(supabase,st.session_state['user_id'])
+
+        access_token = get_fitbit_token(supabase,st.session_state['user_id'])
         
         metrics_cols = st.columns(2)
         with metrics_cols[0]:
             create_metric_card("Total Calories Consumed", latest["cal_consumed"], suffix=" kcal")
-            create_metric_card("Calories Burnt", latest["cal_burnt"], suffix=" kcal")
+            if access_token:
+                dist = dist_covered(access_token)
+                
+                if dist:
+                    dist = round(dist_covered(access_token), 4)
+                    if dist < 1:
+                        create_metric_card("Distance Covered", dist*1000, suffix=" m")
+                    else:
+                        create_metric_card("Distance Covered", dist, suffix=" km")
 
         with metrics_cols[1]:
             # Replace daily goal with a predefined constant or a user-specific value
@@ -380,90 +457,79 @@ def home_page():
                 create_metric_card("Extra Calories Today", abs(remaining), suffix=" kcal")
             else:
                 create_metric_card("Remaining Today", remaining, suffix=" kcal")
-            
-            # create_metric_card("Steps Today", latest["steps"])
+            if access_token:
+                steps = steps_covered(access_token)
+                if steps:
+                    create_metric_card("Steps Today", steps, suffix=" steps")  
 
+        # Detected foods with confidence
+        st.markdown("### 🍽️ Detected Items")
 
-        if (st.session_state.history and len(st.session_state.history[-1]['foods']) > 0 and not st.session_state.meal_just_saved):
-
-            # Detected foods with confidence
-            st.markdown("### 🍽️ Detected Items")
-
-            latest = st.session_state.history[-1]
-            
-            for food in latest['foods']:
-                confidence_color = f"rgb({int(255*(1-food['confidence']))}, {int(255*food['confidence'])}, 0)"
-                st.markdown(f"""
-                    <div style="padding: 10px; margin: 5px 0; background: rgba(0,255,136,0.1); border-radius: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #00ff88;">{food['food']}</span>
-                            <select id="{food['food']}_unit" style="padding: 5px; border-radius: 5px; border: 1px solid #ccc;">
-                                <option value="servings">Servings</option>
-                                <option value="grams">Grams</option>
-                                <option value="pieces">Pieces</option>
-                            </select>
-                            <input type="number" id="{food['food']}_quantity" style="margin-left: 10px;" />
-                            <input type="checkbox" id="{food['food']}_checkbox" style="margin-left: 10px;" />
+        latest = st.session_state.history[-1]
+        
+        for food in latest['foods']:
+            confidence_color = f"rgb({int(255*(1-food['confidence']))}, {int(255*food['confidence'])}, 0)"
+            st.markdown(f"""
+                <div style="padding: 10px; margin: 5px 0; background: rgba(0,255,136,0.1); border-radius: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #00ff88;">{food['food']}</span>
+                        <select id="{food['food']}_unit" style="padding: 5px; border-radius: 5px; border: 1px solid #ccc;">
+                            <option value="servings">Servings</option>
+                            <option value="grams">Grams</option>
+                            <option value="pieces">Pieces</option>
+                        </select>
+                        <input type="number" id="{food['food']}_quantity" style="margin-left: 10px;" />
+                        <input type="checkbox" id="{food['food']}_checkbox" style="margin-left: 10px;" />
+                </div>
+                    <div style="color: #00ccff; font-size: 0.9em;">
+                        {food['calories']} kcal per {food['portion']}
                     </div>
-                        <div style="color: #00ccff; font-size: 0.9em;">
-                            {food['calories']} kcal per {food['portion']}
-                        </div>
-                            <div style="color: {confidence_color};">{int(food['confidence']*100)}% confident</div>
-                    </div>
-            """, unsafe_allow_html=True)
-            print("Meal saved successfully!")
-            if st.button("📥 Save Meal", key="save_meal"):
-                
-                try:
-                    # Ensure the user is logged in and has a valid user_id
-                    user_id = st.session_state.get('user_id')
-                    if not user_id:
-                        st.error("You must be logged in to save meals.")
-                        st.stop()
+                        <div style="color: {confidence_color};">{int(food['confidence']*100)}% confident</div>
+                </div>
+        """, unsafe_allow_html=True)
+        if st.button("📥 Save Meal", key="save_meal"):
+            try:
+                # Ensure the user is logged in and has a valid user_id
+                user_id = st.session_state.get('user_id')
+                if not user_id:
+                    st.error("You must be logged in to save meals.")
+                    st.stop()
 
-                    # Ensure there is a latest analysis to save
-                    if not st.session_state.history:
-                        st.error("No meal detected to save.")
-                        st.stop()
+                # Ensure there is a latest analysis to save
+                if not st.session_state.history:
+                    st.error("No meal detected to save.")
+                    st.stop()
 
-                    latest = st.session_state.history[-1]
-                    today_date = todays_date()
+                latest = st.session_state.history[-1]
+                today_date = todays_date()
 
-                    foods_detect=st.session_state.history[-1]["foods"]
-                    foods_detected = [f"{item['food']}:{item['calories']}kcal" for item in foods_detect]
+                foods_detect=st.session_state.history[-1]["foods"]
+                foods_detected = [f"{item['food']}:{item['calories']}kcal" for item in foods_detect]
 
-                    # Insert the meal into the database
-                    new_meal_insert(
-                        supabase=supabase,
-                        user_id=user_id,
-                        today_date=today_date,
-                        meal_cal=latest['meal_calories'],
-                        foods_detected=foods_detected
-                    )
+                # Insert the meal into the database
+                new_meal_insert(
+                    supabase=supabase,
+                    user_id=user_id,
+                    today_date=today_date,
+                    meal_cal=latest['meal_calories'],
+                    foods_detected=foods_detected
+                )
 
-                    # Fetch the updated total calories for the day
-                    updated_calories = get_cal_consumed(supabase,user_id, today_date)
+                # Fetch the updated total calories for the day
+                updated_calories = get_cal_consumed(supabase,user_id, today_date)
 
-                    # Update the Total Calories metric dynamically
-                    latest['total_calories'] = updated_calories
-                    st.session_state.history[-1] = latest
+                # Update the Total Calories metric dynamically
+                latest['total_calories'] = updated_calories
+                st.session_state.history[-1] = latest
+                st.success("Meal saved successfully!")
+                st.rerun()  # Refresh the UI to show updated values
 
-                    st.session_state.meal_just_saved = True
+            except Exception as e:
+                st.error(f"Error saving meal: {str(e)}")
 
-                    meal_saved=st.success("Meal saved successfully!")
-                    time.sleep(2)
-                    meal_saved.empty()
-                    st.rerun()  # Refresh the UI to show updated values
-
-                except Exception as e:
-                    st.error(f"Error saving meal: {str(e)}")
-
-            else:
-                
-                st.markdown("</div>", unsafe_allow_html=True)
-
-            if 'analyze' in st.session_state and st.session_state.analyze:
-                st.session_state.meal_just_saved = False
+        else:
+            
+            st.markdown("</div>", unsafe_allow_html=True)
 
     # Visualizations
     st.markdown("---")
@@ -503,6 +569,9 @@ def home_page():
                 for entry in meal_history
             ])
             
+            df_today = df_history[df_history["Time"].dt.date == pd.to_datetime(todays_date()).date()]
+            df_today["Cumulative Calories"]=df_today["Calories"][::-1].cumsum()
+
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=df_history["Time"],
@@ -512,7 +581,16 @@ def home_page():
                 line=dict(color='#00ff88', width=2),
                 marker=dict(size=8, symbol='diamond')
             ))
-            
+
+            # Add cumulative calorie line
+            fig.add_trace(go.Scatter(
+            x=df_today["Time"],
+            y=df_today["Cumulative Calories"],
+            mode='markers+lines',
+            name='Cumulative Calories',
+            line=dict(color='#ff8800', width=2),
+            marker=dict(size=6)
+            ))
             # Add daily goal line
             fig.add_trace(go.Scatter(
                 x=df_history["Time"],
@@ -539,8 +617,6 @@ def home_page():
         
         with vis_cols[1]:
             # Calorie Distribution Pie Chart
-
-
             def fetch_meal_history_last_24_hours(user_id):
                 last_24_hours = datetime.now() - timedelta(days=1)
                 result = (
@@ -640,7 +716,7 @@ def home_page():
             }
             for entry in filtered_history[::-1]  # Reverse to display most recent first
         ])
-        history_df.index = range(1, len(history_df) + 1)
+        history_df.index=range(1,len(history_df)+1)
         st.dataframe(history_df, use_container_width=True)
     else:
         st.info("No analysis history available for the selected filter. Upload an image to get started!")
@@ -654,9 +730,10 @@ def home_page():
 
 
 
-def main():
 
-    
+
+
+def main():
     load_dotenv()
     supabase: Client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
@@ -685,7 +762,7 @@ def main():
         except Exception:
             st.session_state['logged_in'] = False
             
-            
+    
 
     # Routing
     if not st.session_state['logged_in']:
@@ -694,7 +771,13 @@ def main():
         elif st.session_state['page'] == 'signup':
             signup_page(supabase)
     else:
-        home_page()
+
+        if st.session_state['page'] == 'home':
+            home_page()
+        elif st.session_state['page'] == 'fitbit':
+            fitbit_page()
+        # st.session_state['page'] = 'home'
+        # home_page()
 
 
 if __name__ == '__main__':
