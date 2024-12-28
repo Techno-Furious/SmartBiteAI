@@ -279,6 +279,7 @@ def fitbit_page():
         unsafe_allow_html=True
     )
 
+    
     # Input for access token
     st.markdown("<h4>Enter Your Fitbit Access Token</h4>", unsafe_allow_html=True)
     access_token = st.text_input("Access Token", placeholder="Paste your Fitbit access token here")
@@ -322,6 +323,21 @@ def fitbit_page():
     if st.button("Back to Home"):
         st.session_state.page = 'home'
         st.rerun()
+
+
+    
+    st.markdown(
+    """
+    <div>
+        <p> Need help getting your Fitbit access token? Follow the tutorial below:</p>
+        <a href="https://dev.fitbit.com/build/reference/web-api/troubleshooting-guide/oauth2-tutorial/" target="_blank" style="font-size:18px; font-weight:bold; color:#00ff88; text-decoration:none; border:2px solid #00ff88; padding:10px 20px; border-radius:10px; transition:all 0.3s ease;">
+            Go to Fitbit OAuth2 Tutorial
+        </a>
+    </div>
+    """, 
+    unsafe_allow_html=True
+    )
+
     
     # Footer
     st.markdown("---")
