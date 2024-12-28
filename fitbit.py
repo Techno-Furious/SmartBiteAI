@@ -2,20 +2,13 @@ import requests
 import dotenv
 import os
 from datetime import datetime
-from api_info import update_steps_distance,ensure_daily_entry
-
+# from api_info import update_steps_distance,ensure_daily_entry
 dotenv.load_dotenv()
-
-access_token = os.getenv('access_token')
+access_token = os.getenv('access')
 header = {'Authorization': f'Bearer {access_token}'}
 
 def todays_date():
     return datetime.today().strftime("%Y-%m-%d")
-
-# response = requests.get(f'https://api.fitbit.com/1/user/-/activities/date/{todays_date()}.json', headers=header).json()
-# print(response)
-# total_distance = response['summary']['distances'][0]['distance']
-# print(total_distance)
 
 def steps_covered():
     response = requests.get(f'https://api.fitbit.com/1/user/-/activities/date/{todays_date()}.json', headers=header).json()
@@ -30,6 +23,8 @@ def cal_burned():
     return response['summary']['caloriesOut']
 
 if __name__ == '__main__':
+    # response = requests.get(f'https://api.fitbit.com/1/user/-/activities/date/{todays_date()}.json', headers=header).json()
+    # print(response)
     print(f"Steps Covered: {steps_covered()}")
     print(f"Distance Covered: {dist_covered()}")
     print(f"Calories Burned: {cal_burned()}")
