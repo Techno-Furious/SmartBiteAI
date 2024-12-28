@@ -35,7 +35,6 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 
-
 # Custom CSS 
 st.markdown("""
     <style>
@@ -717,7 +716,7 @@ def home_page():
     # History Table
     st.markdown("---")
     st.markdown("<h2>📜 Analysis History</h2>", unsafe_allow_html=True)
-
+    st.markdown(f"Showing data from: {time_filter}")
     # Filter history based on the selected time filter
     filtered_history = get_meal_history(supabase, st.session_state["user_id"], time_filter)
 
