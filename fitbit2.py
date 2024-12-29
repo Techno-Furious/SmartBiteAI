@@ -20,15 +20,15 @@ def todays_date():
 def steps_covered(access_token):
     header = {'Authorization': f'Bearer {access_token}'}
     response = requests.get(f'https://api.fitbit.com/1/user/-/activities/date/{todays_date()}.json', headers=header).json()
+    return response['summary']['steps']
     
-    if not response.get('success', True):  # Default to True if 'success' is not in the response
-        return None
+    # if not response.get('success', True):  # Default to True if 'success' is not in the response
+    #     return None
 
-    # Proceed if the response is successful
-    if 'summary' in response and 'steps' in response['summary']:
-        return response['summary']['steps']
-    else:
-        return None
+    # # Proceed if the response is successful
+    # if 'summary' in response and 'steps' in response['summary']:
+    # else:
+    #     return None
 
 def dist_covered(access_token):
     header = {'Authorization': f'Bearer {access_token}'}
@@ -43,9 +43,35 @@ def dist_covered(access_token):
 def cal_burned(access_token):
     header = {'Authorization': f'Bearer {access_token}'}
     response = requests.get(f'https://api.fitbit.com/1/user/-/activities/date/{todays_date()}.json', headers=header).json()
-    if response['success']==False:
-        return None
     return response['summary']['caloriesOut']
+
+def check_fitbit_data(supabase: Client, user_id: str):
+    """Get all Fitbit metrics if token is valid"""
+    try:
+        # Get token from database
+        access_token = get_fitbit_token(supabase, user_id)
+        # print(f"Access Token inside check: {access_token}")
+        if not access_token:
+            return None
+            
+        # Get all metrics
+        steps = steps_covered(access_token)
+        print(f"Steps: {steps}")
+        distance = dist_covered(access_token)
+        print(f"Distance: {distance}")
+        calories = cal_burned(access_token)
+        print(f"Calories: {calories}")
+        print(f"Steps: {steps}, Distance: {distance}, Calories: {calories}")
+        # Only return if we got valid data
+        return {
+                "steps": steps,
+                "distance": distance,
+                "calories": calories
+            }
+        
+    except Exception as e:
+        print(f"Error fetching Fitbit data: {str(e)}")
+        return None
 
 # if __name__ == '__main__':
 #     # response = requests.get(f'https://api.fitbit.com/1/user/-/activities/date/{todays_date()}.json', headers=header).json()

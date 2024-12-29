@@ -109,3 +109,4 @@ def get_latest_daily_data(supabase:Client,user_id):
             "steps": 0,
             "distance": 0.0,
         }
+    

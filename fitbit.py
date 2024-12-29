@@ -22,6 +22,7 @@ def cal_burned():
     response = requests.get(f'https://api.fitbit.com/1/user/-/activities/date/{todays_date()}.json', headers=header).json()
     return response['summary']['caloriesOut']
 
+
 if __name__ == '__main__':
     # response = requests.get(f'https://api.fitbit.com/1/user/-/activities/date/{todays_date()}.json', headers=header).json()
     # print(response)
@@ -43,11 +44,11 @@ if __name__ == '__main__':
 # 'lifetime': {'total': {'activeScore': -1, 'caloriesOut': -1, 'distance': 0.31, 'floors': 0, 'steps': 405},
 # 'tracker': {'activeScore': -1, 'caloriesOut': -1, 'distance': 0.31, 'floors': 0, 'steps': 405}}
  
-#  }
+# #  }
 
-{   'activities': [], 
-    'summary': {'caloriesOut': 9, 'activityCalories': 0, 'caloriesBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentaryMinutes': 6, 'lightlyActiveMinutes': 0, 'fairlyActiveMinutes': 0, 'veryActiveMsBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentasBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentasBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentasBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentaryMinutes': 6, 'lightlyActiveMinutes': 0, 'fairlyActiveMinutes': 0, 'veryActiveMinutes': 0, 'distances': [{'activity': 'total', 'distance': 0.0}, {'activity': 'tracker', 'distance': 0.0}, {'activity': 'sedentaryActive', 'distance': 0.0}, {'activity': 'lightlyActive', 'distance': 0.0}, {'activity': 'moderatelyActive', 'distance': 0.0}, {'activity': 'veryActive', 'distance': 0.0}, 
-    {'activity': 'loggedActivities', 'distance': 0.0}],
-     'marginalCalories': 0, 'heartRateZones': []},
-     'goals': {'caloriesOut': 2624, 'steps': 10000, 'distance': 8.05, 'floors': 10, 'activeMinutes': 30}
- }
+# {   'activities': [], 
+#     'summary': {'caloriesOut': 9, 'activityCalories': 0, 'caloriesBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentaryMinutes': 6, 'lightlyActiveMinutes': 0, 'fairlyActiveMinutes': 0, 'veryActiveMsBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentasBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentasBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentasBMR': 7, 'activeScore': -1, 'steps': 0, 'floors': 0, 'elevation': 0.0, 'sedentaryMinutes': 6, 'lightlyActiveMinutes': 0, 'fairlyActiveMinutes': 0, 'veryActiveMinutes': 0, 'distances': [{'activity': 'total', 'distance': 0.0}, {'activity': 'tracker', 'distance': 0.0}, {'activity': 'sedentaryActive', 'distance': 0.0}, {'activity': 'lightlyActive', 'distance': 0.0}, {'activity': 'moderatelyActive', 'distance': 0.0}, {'activity': 'veryActive', 'distance': 0.0}, 
+#     {'activity': 'loggedActivities', 'distance': 0.0}],
+#      'marginalCalories': 0, 'heartRateZones': []},
+#      'goals': {'caloriesOut': 2624, 'steps': 10000, 'distance': 8.05, 'floors': 10, 'activeMinutes': 30}
+#  }

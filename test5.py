@@ -281,8 +281,8 @@ def fitbit_page():
     
     # Input for access token
     st.markdown("<h4>Enter Your Fitbit Access Token</h4>", unsafe_allow_html=True)
-    access_token = st.text_input("Access Token", placeholder="Paste your Fitbit access token here")
-    refresh_token = st.text_input("Refresh Token", placeholder="Paste your Fitbit refresh token here")
+    access_token = st.text_input("Access Token", placeholder="Paste your Fitbit access token here",type="password")
+    refresh_token = st.text_input("Refresh Token", placeholder="Paste your Fitbit refresh token here",type="password")
     col1, col2 = st.columns([0.1, 0.5])
     with col1:
         if st.button("Save Tokens"):
@@ -324,27 +324,56 @@ def fitbit_page():
                 elif not refresh_token.strip():
                     st.error("Please enter a valid \"Refresh token\".")
 
+    # with col2:
+    #     if st.button("Clear Tokens"):
+    #         st.session_state['access_token'] = ""
+    #         st.session_state['refresh_token'] = ""
+    #         st.experimental_rerun()
+
+    col1, col2, col3 = st.columns([1.7, 1, 1])
     with col2:
-        if st.button("Clear Tokens"):
-            access_token = ""
-            refresh_token = ""
+        if st.button("Back to Home"):
+            st.session_state.page = 'home'
+            st.rerun()
 
-
-    if st.button("Back to Home"):
-        st.session_state.page = 'home'
-        st.rerun()
-    
     st.markdown(
-    """
-    <div>
-        <p> Need help getting your Fitbit access token? Follow the tutorial below:</p>
-        <a href="https://dev.fitbit.com/build/reference/web-api/troubleshooting-guide/oauth2-tutorial/" target="_blank" style="font-size:18px; font-weight:bold; color:#00ff88; text-decoration:none; border:2px solid #00ff88; padding:10px 20px; border-radius:10px; transition:all 0.3s ease;">
-            Go to Fitbit OAuth2 Tutorial
-        </a>
-    </div>
-    """, 
-    unsafe_allow_html=True
+        """
+        <div style="overflow: visible;">
+            <p>Need help getting your Fitbit access token? Follow the tutorial below:</p>
+            <a href="https://dev.fitbit.com/build/reference/web-api/troubleshooting-guide/oauth2-tutorial/", target="_blank", class="hover-button">
+                Go to Fitbit OAuth2 Tutorial
+            </a>
+        </div>
+        <style>
+            a {
+            text-decoration: none; 
+            }
+            .hover-button {
+            text-decoration: none; 
+            font-size: 18px; 
+            font-weight: bold; 
+            color: #00ff88; 
+            text-decoration: none; 
+            border: 2px solid #00ff88; 
+            padding: 10px 20px; 
+            border-radius: 10px; 
+            transition: transform 0.5s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: inline-block; /* Ensure it's inline-block to respect the scaling */
+            }
+
+            .hover-button:hover {
+                transform: scale(1.1);
+                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+                background-color: #00ff88;
+                color: dark;
+            }
+        </style>
+        """, 
+        unsafe_allow_html=True
     )
+
+
 
     
     # Footer
@@ -448,8 +477,10 @@ def home_page():
                         st.success("✨ Analysis Complete!")
                         # st.image(output_image, caption="Output Image", use_container_width=True)
                         os.remove(temp_image_path)
+                        st.session_state.show_save_button = True  # Show save button after successful analysis
                     except Exception as e:
                         st.error(f"❌ Error: {str(e)}")
+                        st.session_state.show_save_button = False
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col2:
@@ -481,10 +512,40 @@ def home_page():
                 create_metric_card("Extra Calories Today", abs(remaining), suffix=" kcal")
             else:
                 create_metric_card("Remaining Today", remaining, suffix=" kcal")
-            if access_token:
-                steps = steps_covered(access_token)
-                if steps:
-                    create_metric_card("Steps Today", steps, suffix=" steps")  
+            # if access_token:
+            #     print(f"Access token found for user {st.session_state['user_id']} : {access_token}") 
+            #     steps = steps_covered(access_token)
+            #     if steps:
+            #         create_metric_card("Steps Today", steps, suffix=" steps")  
+
+        fitbit_data = check_fitbit_data(supabase, st.session_state.get('user_id'))
+        print(f"Fitbit data: {fitbit_data}")
+        if fitbit_data:
+            st.markdown("<h2>📊 Fitbit Metrics</h2>", unsafe_allow_html=True)
+            with st.container():
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    create_metric_card("Steps Today", 
+                                    fitbit_data["steps"], 
+                                    suffix=" steps")
+                    
+                with col2:
+                    # Format distance based on value
+                    dist = fitbit_data["distance"]
+                    if dist < 1:
+                        create_metric_card("Distance Covered", 
+                                        round(dist*1000, 1), 
+                                        suffix=" m")
+                    else:
+                        create_metric_card("Distance Covered", 
+                                        round(dist, 2), 
+                                        suffix=" km")
+                        
+                with col3:
+                    create_metric_card("Calories Burned", 
+                                    fitbit_data["calories"], 
+                                    suffix=" kcal")
 
         # Detected foods with confidence
         st.markdown("### 🍽️ Detected Items")
@@ -511,45 +572,47 @@ def home_page():
                         <div style="color: {confidence_color};">{int(food['confidence']*100)}% confident</div>
                 </div>
         """, unsafe_allow_html=True)
-        if st.button("📥 Save Meal", key="save_meal"):
-            try:
-                # Ensure the user is logged in and has a valid user_id
-                user_id = st.session_state.get('user_id')
-                if not user_id:
-                    st.error("You must be logged in to save meals.")
-                    st.stop()
+        if st.session_state.show_save_button:
+            if st.button("📥 Save Meal", key="save_meal"):
+                try:
+                    # Ensure the user is logged in and has a valid user_id
+                    user_id = st.session_state.get('user_id')
+                    if not user_id:
+                        st.error("You must be logged in to save meals.")
+                        st.stop()
 
-                # Ensure there is a latest analysis to save
-                if not st.session_state.history:
-                    st.error("No meal detected to save.")
-                    st.stop()
+                    # Ensure there is a latest analysis to save
+                    if not st.session_state.history:
+                        st.error("No meal detected to save.")
+                        st.stop()
 
-                latest = st.session_state.history[-1]
-                today_date = todays_date()
+                    latest = st.session_state.history[-1]
+                    today_date = todays_date()
 
-                foods_detect=st.session_state.history[-1]["foods"]
-                foods_detected = [f"{item['food']}:{item['calories']}kcal" for item in foods_detect]
+                    foods_detect=st.session_state.history[-1]["foods"]
+                    foods_detected = [f"{item['food']}:{item['calories']}kcal" for item in foods_detect]
 
-                # Insert the meal into the database
-                new_meal_insert(
-                    supabase=supabase,
-                    user_id=user_id,
-                    today_date=today_date,
-                    meal_cal=latest['meal_calories'],
-                    foods_detected=foods_detected
-                )
+                    # Insert the meal into the database
+                    new_meal_insert(
+                        supabase=supabase,
+                        user_id=user_id,
+                        today_date=today_date,
+                        meal_cal=latest['meal_calories'],
+                        foods_detected=foods_detected
+                    )
 
-                # Fetch the updated total calories for the day
-                updated_calories = get_cal_consumed(supabase,user_id, today_date)
+                    # Fetch the updated total calories for the day
+                    updated_calories = get_cal_consumed(supabase,user_id, today_date)
 
-                # Update the Total Calories metric dynamically
-                latest['total_calories'] = updated_calories
-                st.session_state.history[-1] = latest
-                st.success("Meal saved successfully!")
-                st.rerun()  # Refresh the UI to show updated values
+                    # Update the Total Calories metric dynamically
+                    latest['total_calories'] = updated_calories
+                    st.session_state.history[-1] = latest
+                    st.success("Meal saved successfully!")
+                    st.session_state.show_save_button = False  # Hide button after saving
+                    st.rerun()  # Refresh the UI to show updated values
 
-            except Exception as e:
-                st.error(f"Error saving meal: {str(e)}")
+                except Exception as e:
+                    st.error(f"Error saving meal: {str(e)}")
 
         else:
             
