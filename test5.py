@@ -13,9 +13,9 @@ import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import extra_streamlit_components as stx
-from fitbit import *
+from fitbit2 import *
 from ai_model import food_detect
-from api_info import *
+from api_info2 import *
 
 #  page configuration
 st.set_page_config(
@@ -282,48 +282,57 @@ def fitbit_page():
     # Input for access token
     st.markdown("<h4>Enter Your Fitbit Access Token</h4>", unsafe_allow_html=True)
     access_token = st.text_input("Access Token", placeholder="Paste your Fitbit access token here")
+    refresh_token = st.text_input("Refresh Token", placeholder="Paste your Fitbit refresh token here")
+    col1, col2 = st.columns([0.1, 0.5])
+    with col1:
+        if st.button("Save Tokens"):
+            if access_token.strip() and refresh_token.strip():
+                response = supabase.table("Fitbit_Token").select("*").eq("user_id", user_id).execute()
 
-    
-    # Save button
-    if st.button("Save Access Token"):
-        if access_token.strip():
-            response = supabase.table("Fitbit_Token").select("*").eq("user_id", user_id).execute()
-
-            if response.data:
-                # User has a token, update it
-                update_response = supabase.table("Fitbit_Token").update({
-                    "access_token": access_token,
-                    "updated_at": "now()"
-                }).eq("user_id", user_id).execute()
-                
-                if not update_response:
-                    print(f"Error updating token: {update_response.error}")
+                if response.data:
+                    # User has a token, update it
+                    update_response = supabase.table("Fitbit_Token").update({
+                        "access_token": access_token,
+                        "refresh_token": refresh_token,
+                        "updated_at": "now()"
+                    }).eq("user_id", user_id).execute()
+                    
+                    if not update_response:
+                        print(f"Error updating token: {update_response.error}")
+                    else:
+                        print("Tokens updated successfully.")
                 else:
-                    print("Access token updated successfully.")
+                    # User does not have a token, insert new record
+                    insert_response = supabase.table("Fitbit_Token").insert({
+                        "user_id": user_id,
+                        "access_token": access_token,
+                        "refresh_token": refresh_token
+                    }).execute()
+                    
+                    if not insert_response:
+                        print(f"Error inserting token: {insert_response.error}")
+                    else:
+                        print("Tokens inserted successfully.")
+                st.success("Your Fitbit tokens have been saved!")
+                st.session_state.page = 'home' 
+                st.rerun()
             else:
-                # User does not have a token, insert new record
-                insert_response = supabase.table("Fitbit_Token").insert({
-                    "user_id": user_id,
-                    "access_token": access_token
-                }).execute()
-                
-                if not insert_response:
-                    print(f"Error inserting token: {insert_response.error}")
-                else:
-                    print("Access token inserted successfully.")
-            st.success("Your Fitbit access token has been saved!")
-            st.session_state.page = 'home' 
-            st.rerun()
-        else:
-            st.error("Please enter a valid access token.")
+                if not access_token.strip() and not refresh_token.strip():
+                    st.error("Please enter a valid \"Access token\" and \"Refresh token\".")
+                elif not access_token.strip():
+                    st.error("Please enter a valid \"Access token\".")
+                elif not refresh_token.strip():
+                    st.error("Please enter a valid \"Refresh token\".")
 
+    with col2:
+        if st.button("Clear Tokens"):
+            access_token = ""
+            refresh_token = ""
 
 
     if st.button("Back to Home"):
         st.session_state.page = 'home'
         st.rerun()
-
-
     
     st.markdown(
     """
