@@ -821,6 +821,16 @@ def home_page():
 
 
 def main():
+    # Initialize session states
+    if 'show_save_button' not in st.session_state:
+        st.session_state.show_save_button = False
+    if 'show_analysis_results' not in st.session_state:    
+        st.session_state.show_analysis_results = False
+    if 'current_results' not in st.session_state:
+        st.session_state.current_results = None
+    if 'current_calories' not in st.session_state:
+        st.session_state.current_calories = 0
+
     load_dotenv()
     supabase: Client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
